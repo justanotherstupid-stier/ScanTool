@@ -1,0 +1,1608 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ScanTool v2 — Scanlation Editor</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Syne:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #0d0d0f;
+        --s1: #161619;
+        --s2: #1e1e23;
+        --s3: #26262d;
+        --s4: #2e2e38;
+        --b: #38383f;
+        --b2: #484850;
+        --acc: #e8c547;
+        --acc2: #5b8dee;
+        --acc3: #5bd47a;
+        --tx: #dddde8;
+        --tx2: #8888a0;
+        --tx3: #55556a;
+        --font: "IBM Plex Mono", monospace;
+      }
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--tx);
+        font-family: var(--font);
+        font-size: 12px;
+      }
+      #app {
+        display: grid;
+        grid-template-rows: 42px 1fr;
+        grid-template-columns: 52px 1fr 260px;
+        height: 100vh;
+      }
+
+      /* TOPBAR */
+      #topbar {
+        grid-column: 1/-1;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0 10px;
+        background: var(--s1);
+        border-bottom: 1px solid var(--b);
+      }
+      .logo {
+        font-family: "Syne", sans-serif;
+        font-size: 14px;
+        font-weight: 800;
+        color: var(--acc);
+        letter-spacing: 2px;
+        margin-right: 8px;
+        white-space: nowrap;
+      }
+      .logo em {
+        color: var(--tx2);
+        font-style: normal;
+      }
+      .sep {
+        width: 1px;
+        height: 20px;
+        background: var(--b);
+        margin: 0 2px;
+        flex-shrink: 0;
+      }
+      .tbtn {
+        height: 28px;
+        padding: 0 10px;
+        border: 1px solid var(--b);
+        background: var(--s2);
+        color: var(--tx);
+        font-family: var(--font);
+        font-size: 11px;
+        cursor: pointer;
+        border-radius: 3px;
+        transition: all 0.12s;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .tbtn:hover {
+        background: var(--s3);
+        border-color: var(--acc);
+        color: var(--acc);
+      }
+      .tbtn.pri {
+        background: var(--acc);
+        color: #000;
+        border-color: var(--acc);
+        font-weight: 700;
+      }
+      .tbtn.pri:hover {
+        background: #f5d666;
+      }
+      .tbtn:disabled {
+        opacity: 0.35;
+        cursor: default;
+        pointer-events: none;
+      }
+      #zoom-display {
+        font-size: 11px;
+        color: var(--tx2);
+        min-width: 42px;
+        text-align: center;
+      }
+      #page-info {
+        font-size: 10px;
+        color: var(--tx3);
+        margin-left: auto;
+        white-space: nowrap;
+      }
+
+      /* TOOLBAR */
+      #toolbar {
+        grid-row: 2;
+        grid-column: 1;
+        background: var(--s1);
+        border-right: 1px solid var(--b);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 6px 0;
+        gap: 2px;
+        overflow: hidden;
+      }
+      .tool-btn {
+        width: 40px;
+        height: 40px;
+        border: 1px solid transparent;
+        background: transparent;
+        border-radius: 5px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--tx2);
+        transition: all 0.12s;
+        position: relative;
+        flex-shrink: 0;
+      }
+      .tool-btn:hover {
+        background: var(--s2);
+        color: var(--tx);
+        border-color: var(--b);
+      }
+      .tool-btn.active {
+        background: var(--s3);
+        color: var(--acc);
+        border-color: var(--acc);
+      }
+      .tool-btn svg {
+        width: 18px;
+        height: 18px;
+        pointer-events: none;
+      }
+      .tool-sep {
+        width: 28px;
+        height: 1px;
+        background: var(--b);
+        margin: 3px 0;
+        flex-shrink: 0;
+      }
+      .tip {
+        position: absolute;
+        left: 48px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: var(--s4);
+        color: var(--tx);
+        font-size: 10px;
+        padding: 3px 8px;
+        border-radius: 3px;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.1s;
+        border: 1px solid var(--b);
+        z-index: 200;
+      }
+      .tool-btn:hover .tip {
+        opacity: 1;
+      }
+
+      /* CANVAS */
+      #canvas-wrap {
+        grid-row: 2;
+        grid-column: 2;
+        overflow: hidden;
+        position: relative;
+        background: #080809;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+          linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.018) 1px,
+            transparent 1px
+          );
+        background-size: 20px 20px;
+        cursor: crosshair;
+      }
+      #canvas-container {
+        position: absolute;
+        transform-origin: 0 0;
+      }
+      #display-canvas {
+        display: block;
+      }
+      #cursor-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+      }
+      #canvas-wrap.drag-over {
+        outline: 2px dashed var(--acc);
+        outline-offset: -4px;
+      }
+      #drop-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        pointer-events: none;
+      }
+      #drop-overlay .di {
+        font-size: 52px;
+        opacity: 0.15;
+      }
+      #drop-overlay h2 {
+        font-family: "Syne", sans-serif;
+        font-size: 16px;
+        color: var(--tx);
+        opacity: 0.3;
+      }
+      #drop-overlay p {
+        font-size: 10px;
+        color: var(--tx3);
+        text-align: center;
+        line-height: 2;
+      }
+      #drop-overlay.hidden {
+        display: none;
+      }
+      #coords {
+        position: absolute;
+        bottom: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(13, 13, 15, 0.88);
+        backdrop-filter: blur(6px);
+        border: 1px solid var(--b);
+        border-radius: 20px;
+        padding: 3px 12px;
+        font-size: 10px;
+        color: var(--tx2);
+        pointer-events: none;
+        white-space: nowrap;
+      }
+
+      /* PANEL */
+      #panel {
+        grid-row: 2;
+        grid-column: 3;
+        background: var(--s1);
+        border-left: 1px solid var(--b);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      #panel-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--b);
+        flex-shrink: 0;
+      }
+      .ptab {
+        flex: 1;
+        height: 34px;
+        border: none;
+        background: transparent;
+        color: var(--tx2);
+        font-family: var(--font);
+        font-size: 10px;
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: all 0.12s;
+        text-transform: uppercase;
+      }
+      .ptab:hover {
+        color: var(--tx);
+      }
+      .ptab.active {
+        color: var(--acc);
+        border-bottom-color: var(--acc);
+      }
+      .tab-pane {
+        display: none;
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .tab-pane.active {
+        display: flex;
+      }
+      .slabel {
+        font-size: 9px;
+        letter-spacing: 2px;
+        color: var(--tx3);
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--b);
+        padding-bottom: 4px;
+        margin-bottom: 2px;
+      }
+
+      /* PROPS */
+      .prop-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--tx2);
+        font-size: 11px;
+      }
+      .prop-row span {
+        min-width: 26px;
+        text-align: right;
+        color: var(--tx);
+        font-size: 11px;
+      }
+      input[type="range"] {
+        flex: 1;
+        height: 3px;
+        -webkit-appearance: none;
+        appearance: none;
+        background: var(--s3);
+        border-radius: 2px;
+        cursor: pointer;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: var(--acc);
+        cursor: pointer;
+      }
+      .shape-grp {
+        display: flex;
+        gap: 3px;
+        flex: 1;
+      }
+      .tbtn-sm {
+        flex: 1;
+        height: 26px;
+        border: 1px solid var(--b);
+        background: var(--s2);
+        color: var(--tx2);
+        font-family: var(--font);
+        font-size: 10px;
+        cursor: pointer;
+        border-radius: 3px;
+        transition: all 0.1s;
+      }
+      .tbtn-sm.active {
+        background: var(--s3);
+        border-color: var(--acc);
+        color: var(--acc);
+      }
+      .tbtn-sm:hover {
+        border-color: var(--b2);
+      }
+      input[type="color"] {
+        width: 32px;
+        height: 26px;
+        border: 1px solid var(--b);
+        border-radius: 3px;
+        background: none;
+        cursor: pointer;
+        padding: 2px;
+      }
+      .swatch-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 3px;
+      }
+      .swatch {
+        width: 100%;
+        aspect-ratio: 1;
+        border-radius: 2px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: border-color 0.1s;
+      }
+      .swatch:hover,
+      .swatch.active {
+        border-color: var(--acc);
+      }
+      .kshort {
+        font-size: 10px;
+        color: var(--tx2);
+        line-height: 2.2;
+      }
+      .kshort b {
+        color: var(--tx);
+      }
+
+      /* LAYERS */
+      .layer-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .layer-row {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 6px;
+        border-radius: 4px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: all 0.12s;
+        background: var(--s2);
+      }
+      .layer-row:hover {
+        background: var(--s3);
+      }
+      .layer-row.active-layer {
+        background: var(--s3);
+        border-color: var(--acc);
+      }
+      .layer-eye {
+        width: 22px;
+        height: 22px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        color: var(--tx2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 3px;
+        flex-shrink: 0;
+        padding: 0;
+        font-size: 13px;
+      }
+      .layer-eye:hover {
+        color: var(--tx);
+      }
+      .layer-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .layer-name {
+        flex: 1;
+        font-size: 11px;
+        color: var(--tx);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+      }
+      .layer-op-pct {
+        font-size: 9px;
+        color: var(--tx3);
+        white-space: nowrap;
+      }
+      .layer-acts {
+        display: flex;
+        gap: 2px;
+        flex-shrink: 0;
+      }
+      .lico {
+        width: 20px;
+        height: 20px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        color: var(--tx3);
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 2px;
+        transition: color 0.1s;
+        padding: 0;
+      }
+      .lico:hover {
+        color: var(--tx);
+      }
+      .lico.del:hover {
+        color: #e85b5b;
+      }
+      .lico:disabled {
+        opacity: 0.2;
+        cursor: default;
+        pointer-events: none;
+      }
+      .layer-oprow {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 6px 6px;
+        font-size: 10px;
+        color: var(--tx2);
+      }
+      .add-layer-btn {
+        height: 28px;
+        border: 1px dashed var(--b2);
+        background: transparent;
+        color: var(--tx2);
+        font-family: var(--font);
+        font-size: 11px;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: all 0.12s;
+        margin-top: 4px;
+        width: 100%;
+      }
+      .add-layer-btn:hover {
+        border-color: var(--acc);
+        color: var(--acc);
+      }
+      .layer-name-input {
+        flex: 1;
+        background: var(--s4);
+        border: 1px solid var(--acc);
+        color: var(--tx);
+        font-family: var(--font);
+        font-size: 11px;
+        padding: 1px 4px;
+        border-radius: 2px;
+        outline: none;
+        min-width: 0;
+      }
+
+      /* HISTORY */
+      .hist-nav {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 6px;
+        flex-shrink: 0;
+      }
+      .hist-list {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .hitem {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 5px 8px;
+        border-radius: 3px;
+        border-left: 2px solid transparent;
+        color: var(--tx2);
+        font-size: 10px;
+      }
+      .hitem.cur {
+        background: var(--s3);
+        border-left-color: var(--acc);
+        color: var(--tx);
+      }
+      .hitem.fut {
+        opacity: 0.28;
+      }
+      .hico {
+        font-size: 13px;
+        width: 16px;
+        text-align: center;
+        flex-shrink: 0;
+      }
+      .hlbl {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .hlyr {
+        color: var(--tx3);
+        white-space: nowrap;
+        font-size: 9px;
+      }
+      .no-hist {
+        font-size: 10px;
+        color: var(--tx3);
+        text-align: center;
+        padding: 20px 0;
+      }
+
+      /* TOAST */
+      #toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: var(--s4);
+        border: 1px solid var(--acc);
+        color: var(--acc);
+        font-size: 11px;
+        padding: 7px 14px;
+        border-radius: 4px;
+        opacity: 0;
+        transform: translateY(6px);
+        transition: all 0.18s;
+        pointer-events: none;
+        z-index: 9999;
+      }
+      #toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="topbar">
+        <div class="logo">⬡ SCAN<em>TOOL</em></div>
+        <div class="sep"></div>
+        <button class="tbtn" onclick="document.getElementById('fi').click()">
+          📂 Abrir
+        </button>
+        <input type="file" id="fi" accept="image/*" style="display: none" />
+        <div class="sep"></div>
+        <button class="tbtn" id="btn-undo" onclick="undo()" disabled>
+          ↩ Deshacer
+        </button>
+        <button class="tbtn" id="btn-redo" onclick="redo()" disabled>
+          ↪ Rehacer
+        </button>
+        <div class="sep"></div>
+        <button class="tbtn" onclick="zoomOut()">−</button>
+        <div id="zoom-display">100%</div>
+        <button class="tbtn" onclick="zoomIn()">+</button>
+        <button class="tbtn" onclick="zoomFit()">Ajustar</button>
+        <div class="sep"></div>
+        <button class="tbtn pri" onclick="exportPNG()">💾 Exportar PNG</button>
+        <div id="page-info">Sin imagen</div>
+      </div>
+
+      <div id="toolbar">
+        <button
+          class="tool-btn active"
+          id="tb-brush"
+          onclick="setTool('brush')"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" />
+            <path
+              d="M20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+            />
+          </svg>
+          <span class="tip">Pincel (B)</span>
+        </button>
+        <button class="tool-btn" id="tb-eraser" onclick="setTool('eraser')">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M20 20H7L3 16l10-10 7 7-3.5 3.5" />
+            <path d="M6 10l8 8" />
+          </svg>
+          <span class="tip">Borrador (E)</span>
+        </button>
+        <button class="tool-btn" id="tb-fill" onclick="setTool('fill')">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15a1.49 1.49 0 000 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10L10 5.21 14.79 10H5.21zM19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z"
+            />
+          </svg>
+          <span class="tip">Relleno (F)</span>
+        </button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" id="tb-pan" onclick="setTool('pan')">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"
+            />
+          </svg>
+          <span class="tip">Mover (V)</span>
+        </button>
+        <button class="tool-btn" id="tb-zoom" onclick="setTool('zoomtool')">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            <line x1="11" y1="8" x2="11" y2="14" />
+            <line x1="8" y1="11" x2="14" y2="11" />
+          </svg>
+          <span class="tip">Zoom (Z)</span>
+        </button>
+      </div>
+
+      <div id="canvas-wrap">
+        <div id="canvas-container">
+          <canvas id="display-canvas"></canvas>
+          <canvas id="cursor-canvas"></canvas>
+        </div>
+        <div id="drop-overlay">
+          <div class="di">🖼️</div>
+          <h2>Arrastrá una página aquí</h2>
+          <p>o usá "Abrir" arriba · JPG · PNG · WEBP</p>
+        </div>
+        <div id="coords">x: 0 y: 0</div>
+      </div>
+
+      <div id="panel">
+        <div id="panel-tabs">
+          <button class="ptab active" onclick="switchTab('props')">
+            Props
+          </button>
+          <button class="ptab" onclick="switchTab('layers')">Capas</button>
+          <button class="ptab" onclick="switchTab('history')">Historial</button>
+        </div>
+
+        <div class="tab-pane active" id="tab-props">
+          <div id="props-content"></div>
+        </div>
+
+        <div class="tab-pane" id="tab-layers">
+          <div class="slabel">Capas</div>
+          <div id="layers-list"></div>
+          <button class="add-layer-btn" onclick="addLayer()">
+            + Nueva capa
+          </button>
+          <div
+            style="
+              font-size: 9px;
+              color: var(--tx3);
+              line-height: 1.8;
+              margin-top: 6px;
+            "
+          >
+            Doble-click en el nombre para renombrar.<br />
+            Alt+click en el ojo para solo esa capa.
+          </div>
+        </div>
+
+        <div class="tab-pane" id="tab-history">
+          <div class="slabel">Historial</div>
+          <div class="hist-nav">
+            <button
+              class="tbtn"
+              style="flex: 1"
+              id="h-undo"
+              onclick="undo()"
+              disabled
+            >
+              ↩ Deshacer
+            </button>
+            <button
+              class="tbtn"
+              style="flex: 1"
+              id="h-redo"
+              onclick="redo()"
+              disabled
+            >
+              ↪ Rehacer
+            </button>
+          </div>
+          <div id="history-list"></div>
+        </div>
+      </div>
+    </div>
+    <div id="toast"></div>
+
+    <script>
+      // ══════════════════════════════════
+      // GLOBALS
+      // ══════════════════════════════════
+      const displayCanvas = document.getElementById("display-canvas");
+      const displayCtx = displayCanvas.getContext("2d");
+      const cursorCanvas = document.getElementById("cursor-canvas");
+      const cursorCtx = cursorCanvas.getContext("2d");
+      const wrap = document.getElementById("canvas-wrap");
+      const container = document.getElementById("canvas-container");
+
+      let tool = "brush",
+        brushSize = 20,
+        brushOpacity = 1,
+        brushHard = 1,
+        brushShape = "round";
+      let fillTol = 30,
+        color = "#ffffff";
+      let zoom = 1,
+        panX = 0,
+        panY = 0;
+      let painting = false,
+        spaceDown = false,
+        lastX = 0,
+        lastY = 0;
+      let panSX = 0,
+        panSY = 0,
+        panOX = 0,
+        panOY = 0;
+      let imageLoaded = false,
+        pendingBefore = null;
+
+      // ══════════════════════════════════
+      // LAYERS
+      // ══════════════════════════════════
+      let layers = [],
+        activeLayerIndex = 1,
+        nextLayerId = 1;
+
+      function mkLayer(name, dotColor, locked) {
+        return {
+          id: nextLayerId++,
+          name,
+          dotColor,
+          visible: true,
+          locked: !!locked,
+          opacity: 1,
+          canvas: null,
+        };
+      }
+      function mkCanvas(w, h) {
+        const c = document.createElement("canvas");
+        c.width = w;
+        c.height = h;
+        return c;
+      }
+      function initLayers(w, h) {
+        layers = [
+          mkLayer("Original", "#888888", true),
+          mkLayer("Limpieza", "#5b8dee"),
+          mkLayer("Texto", "#5bd47a"),
+        ];
+        layers.forEach((l) => {
+          l.canvas = mkCanvas(w, h);
+        });
+        activeLayerIndex = 1;
+      }
+      function getLayerCtx(i) {
+        return layers[i]?.canvas?.getContext("2d") || null;
+      }
+      function getActiveCtx() {
+        return getLayerCtx(activeLayerIndex);
+      }
+      function captureLayer(i) {
+        const c = layers[i]?.canvas;
+        return c
+          ? c.getContext("2d").getImageData(0, 0, c.width, c.height)
+          : null;
+      }
+      function composite() {
+        displayCtx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
+        for (const l of layers) {
+          if (!l.visible || !l.canvas) continue;
+          displayCtx.globalAlpha = l.opacity;
+          displayCtx.drawImage(l.canvas, 0, 0);
+        }
+        displayCtx.globalAlpha = 1;
+      }
+
+      // ══════════════════════════════════
+      // HISTORY
+      // ══════════════════════════════════
+      const hist = [];
+      let histIdx = -1;
+
+      function pushHist(label, icon, layerIndex, before, after) {
+        hist.splice(histIdx + 1);
+        hist.push({
+          label,
+          icon,
+          layerName: layers[layerIndex]?.name || "",
+          layerIndex,
+          before,
+          after,
+        });
+        if (hist.length > 40) hist.shift();
+        histIdx = hist.length - 1;
+        renderHistory();
+        updateURBtns();
+      }
+      function undo() {
+        if (histIdx < 0) return;
+        const it = hist[histIdx];
+        getLayerCtx(it.layerIndex)?.putImageData(it.before, 0, 0);
+        histIdx--;
+        composite();
+        renderHistory();
+        updateURBtns();
+      }
+      function redo() {
+        if (histIdx >= hist.length - 1) return;
+        histIdx++;
+        const it = hist[histIdx];
+        getLayerCtx(it.layerIndex)?.putImageData(it.after, 0, 0);
+        composite();
+        renderHistory();
+        updateURBtns();
+      }
+      function updateURBtns() {
+        const u = histIdx >= 0,
+          r = histIdx < hist.length - 1;
+        ["btn-undo", "h-undo"].forEach(
+          (id) => (document.getElementById(id).disabled = !u),
+        );
+        ["btn-redo", "h-redo"].forEach(
+          (id) => (document.getElementById(id).disabled = !r),
+        );
+      }
+
+      // ══════════════════════════════════
+      // TOOL
+      // ══════════════════════════════════
+      function setTool(t) {
+        tool = t;
+        document
+          .querySelectorAll(".tool-btn")
+          .forEach((b) => b.classList.remove("active"));
+        const map = {
+          brush: "tb-brush",
+          eraser: "tb-eraser",
+          fill: "tb-fill",
+          pan: "tb-pan",
+          zoomtool: "tb-zoom",
+        };
+        document.getElementById(map[t])?.classList.add("active");
+        wrap.style.cursor =
+          t === "pan" ? "grab" : t === "zoomtool" ? "zoom-in" : "crosshair";
+        renderProps();
+      }
+      function setBrushShape(s) {
+        brushShape = s;
+        document
+          .getElementById("sh-round")
+          ?.classList.toggle("active", s === "round");
+        document
+          .getElementById("sh-sq")
+          ?.classList.toggle("active", s === "square");
+      }
+
+      // ══════════════════════════════════
+      // PROPS PANEL
+      // ══════════════════════════════════
+      const SWATCHES = [
+        "#ffffff",
+        "#000000",
+        "#f5f5f0",
+        "#e8e0d0",
+        "#d4c9b0",
+        "#a09080",
+        "#3a3a3a",
+        "#c0b8a0",
+        "#ffe8c8",
+        "#c8e0ff",
+        "#ffc8e8",
+        "#c8ffd4",
+      ];
+
+      function renderProps() {
+        const t = tool;
+        let h = "";
+
+        if (t === "brush" || t === "eraser") {
+          h += `<div class="slabel">${t === "brush" ? "Pincel" : "Borrador"}</div>
+    <div class="prop-row">Tamaño<input type="range" min="1" max="200" value="${brushSize}" oninput="brushSize=+this.value;document.getElementById('vs').textContent=this.value"><span id="vs">${brushSize}</span></div>
+    <div class="prop-row">Opacidad<input type="range" min="1" max="100" value="${Math.round(brushOpacity * 100)}" oninput="brushOpacity=this.value/100;document.getElementById('vo').textContent=this.value"><span id="vo">${Math.round(brushOpacity * 100)}</span></div>
+    <div class="prop-row">Forma<div class="shape-grp"><button class="tbtn-sm ${brushShape === "round" ? "active" : ""}" id="sh-round" onclick="setBrushShape('round')">● Redondo</button><button class="tbtn-sm ${brushShape === "square" ? "active" : ""}" id="sh-sq" onclick="setBrushShape('square')">■ Cuadrado</button></div></div>`;
+        }
+        if (t === "fill") {
+          h += `<div class="slabel">Relleno de globo</div>
+    <div class="prop-row">Tolerancia<input type="range" min="0" max="255" value="${fillTol}" oninput="fillTol=+this.value;document.getElementById('vt').textContent=this.value"><span id="vt">${fillTol}</span></div>
+    <div style="font-size:10px;color:var(--tx2);line-height:1.7">Mayor valor = rellena áreas con más variación de color entre píxeles vecinos.</div>`;
+        }
+        if (t === "pan") {
+          h += `<div class="slabel">Mover vista</div><div style="font-size:10px;color:var(--tx2);line-height:2">Arrastrá el canvas.<br>También: Espacio + arrastrar.</div>`;
+        }
+        if (t === "zoomtool") {
+          h += `<div class="slabel">Zoom</div><div style="font-size:10px;color:var(--tx2);line-height:2">Click = acercar<br>Shift+Click = alejar<br>Rueda del mouse = zoom suave</div>`;
+        }
+
+        if (t === "brush" || t === "eraser" || t === "fill") {
+          h += `<div class="slabel" style="margin-top:4px">Color activo</div>
+    <div class="prop-row"><input type="color" value="${color}" oninput="color=this.value;deselectSw()"><span style="color:var(--tx2);font-size:10px">Color de ${t === "eraser" ? "borrador (usa blanco)" : "relleno"}</span></div>
+    <div class="swatch-grid">${SWATCHES.map((c) => `<div class="swatch${color === c ? " active" : ""}" style="background:${c}" data-c="${c}" onclick="pickSw(this,'${c}')"></div>`).join("")}</div>`;
+        }
+
+        h += `<div class="slabel" style="margin-top:4px">Atajos de teclado</div>
+  <div class="kshort"><b>B E F V Z</b> — herramientas<br><b>[ ]</b> — tamaño pincel<br><b>Ctrl+Z</b> — deshacer<br><b>Ctrl+Y</b> — rehacer<br><b>Rueda</b> — zoom<br><b>Espacio+drag</b> — mover vista<br><b>Alt+👁️</b> — solo esa capa</div>`;
+
+        document.getElementById("props-content").innerHTML = h;
+      }
+      function pickSw(el, c) {
+        color = c;
+        document
+          .querySelectorAll(".swatch")
+          .forEach((s) => s.classList.toggle("active", s.dataset.c === c));
+      }
+      function deselectSw() {
+        document
+          .querySelectorAll(".swatch")
+          .forEach((s) => s.classList.remove("active"));
+      }
+
+      // ══════════════════════════════════
+      // LAYERS PANEL
+      // ══════════════════════════════════
+      function renderLayers() {
+        const list = document.getElementById("layers-list");
+        list.innerHTML = "";
+        [...layers].reverse().forEach((layer, ri) => {
+          const idx = layers.length - 1 - ri;
+          const isActive = idx === activeLayerIndex;
+
+          const wrap2 = document.createElement("div");
+          wrap2.className = "layer-wrap";
+
+          const row = document.createElement("div");
+          row.className = "layer-row" + (isActive ? " active-layer" : "");
+
+          row.innerHTML = `
+      <button class="layer-eye" title="${layer.visible ? "Ocultar" : "Mostrar"}" onclick="toggleVis(event,${idx})">${layer.visible ? "👁️" : "🚫"}</button>
+      <div class="layer-dot" style="background:${layer.dotColor}"></div>
+      <div class="layer-name" title="Doble-click para renombrar" ondblclick="startRename(${idx},this)">${layer.name}${layer.locked ? " 🔒" : ""}</div>
+      <span class="layer-op-pct">${Math.round(layer.opacity * 100)}%</span>
+      <div class="layer-acts">
+        <button class="lico" title="Subir" onclick="moveLayer(${idx},-1)" ${idx === layers.length - 1 ? "disabled" : ""}>↑</button>
+        <button class="lico" title="Bajar" onclick="moveLayer(${idx},1)" ${idx === 0 ? "disabled" : ""}>↓</button>
+        <button class="lico del" title="Eliminar" onclick="deleteLayer(${idx})" ${layers.length <= 1 || layer.locked ? "disabled" : ""}>✕</button>
+      </div>`;
+
+          const opRow = document.createElement("div");
+          opRow.className = "layer-oprow";
+          opRow.innerHTML = `Opacidad<input type="range" style="flex:1;margin-left:6px" min="0" max="100" value="${Math.round(layer.opacity * 100)}" oninput="setLayerOp(${idx},this.value)">`;
+
+          row.addEventListener("click", (e) => {
+            if (e.target.closest("button")) return;
+            if (e.altKey) soloLayer(idx);
+            else setActiveLayer(idx);
+          });
+
+          wrap2.appendChild(row);
+          wrap2.appendChild(opRow);
+          list.appendChild(wrap2);
+        });
+      }
+
+      function toggleVis(e, idx) {
+        e.stopPropagation();
+        layers[idx].visible = !layers[idx].visible;
+        composite();
+        renderLayers();
+      }
+      function setActiveLayer(idx) {
+        activeLayerIndex = idx;
+        renderLayers();
+      }
+      function setLayerOp(idx, v) {
+        layers[idx].opacity = v / 100;
+        composite();
+        renderLayers();
+      }
+      function soloLayer(idx) {
+        const allV = layers.every((l, i) => (i === idx ? true : !l.visible));
+        layers.forEach((l, i) => {
+          l.visible = allV ? true : i === idx;
+        });
+        composite();
+        renderLayers();
+        toast(
+          allV
+            ? "Todas las capas visibles"
+            : `Solo "${layers[idx].name}" visible`,
+        );
+      }
+      function addLayer() {
+        if (!imageLoaded) {
+          toast("Cargá una imagen primero");
+          return;
+        }
+        const COLS = ["#e8c547", "#e85b8a", "#e87a5b", "#b85bee", "#5beee8"];
+        const l = mkLayer(
+          "Capa " + nextLayerId,
+          COLS[(nextLayerId - 1) % COLS.length],
+        );
+        l.canvas = mkCanvas(displayCanvas.width, displayCanvas.height);
+        layers.push(l);
+        activeLayerIndex = layers.length - 1;
+        renderLayers();
+        toast("Capa creada");
+      }
+      function deleteLayer(idx) {
+        if (layers.length <= 1 || layers[idx].locked) return;
+        if (!confirm(`¿Eliminar "${layers[idx].name}"?`)) return;
+        layers.splice(idx, 1);
+        activeLayerIndex = Math.min(activeLayerIndex, layers.length - 1);
+        composite();
+        renderLayers();
+        toast("Capa eliminada");
+      }
+      function moveLayer(idx, dir) {
+        const t2 = idx - dir;
+        if (t2 < 0 || t2 >= layers.length) return;
+        [layers[idx], layers[t2]] = [layers[t2], layers[idx]];
+        if (activeLayerIndex === idx) activeLayerIndex = t2;
+        else if (activeLayerIndex === t2) activeLayerIndex = idx;
+        composite();
+        renderLayers();
+      }
+      function startRename(idx, el) {
+        if (layers[idx].locked) return;
+        const inp = document.createElement("input");
+        inp.className = "layer-name-input";
+        inp.value = layers[idx].name;
+        el.replaceWith(inp);
+        inp.focus();
+        inp.select();
+        const done = () => {
+          layers[idx].name = inp.value || layers[idx].name;
+          renderLayers();
+        };
+        inp.addEventListener("blur", done);
+        inp.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") inp.blur();
+          if (e.key === "Escape") {
+            inp.value = layers[idx].name;
+            inp.blur();
+          }
+        });
+      }
+
+      // ══════════════════════════════════
+      // HISTORY PANEL
+      // ══════════════════════════════════
+      function renderHistory() {
+        const list = document.getElementById("history-list");
+        if (!hist.length) {
+          list.innerHTML = '<div class="no-hist">Sin acciones aún</div>';
+          return;
+        }
+        list.innerHTML = [...hist]
+          .reverse()
+          .map((it, ri) => {
+            const i = hist.length - 1 - ri;
+            const cls = i === histIdx ? "cur" : i > histIdx ? "fut" : "";
+            return `<div class="hitem ${cls}"><span class="hico">${it.icon}</span><span class="hlbl">${it.label}</span><span class="hlyr">${it.layerName}</span></div>`;
+          })
+          .join("");
+      }
+
+      // ══════════════════════════════════
+      // PANEL TABS
+      // ══════════════════════════════════
+      function switchTab(name) {
+        const names = ["props", "layers", "history"];
+        document
+          .querySelectorAll(".ptab")
+          .forEach((t, i) => t.classList.toggle("active", names[i] === name));
+        document
+          .querySelectorAll(".tab-pane")
+          .forEach((p, i) =>
+            p.classList.toggle(
+              "active",
+              ["tab-props", "tab-layers", "tab-history"][i] === "tab-" + name,
+            ),
+          );
+      }
+
+      // ══════════════════════════════════
+      // ZOOM / PAN
+      // ══════════════════════════════════
+      function applyTransform() {
+        container.style.transform = `translate(${panX}px,${panY}px) scale(${zoom})`;
+        document.getElementById("zoom-display").textContent =
+          Math.round(zoom * 100) + "%";
+      }
+      function zoomAt(cx, cy, f) {
+        const nz = Math.min(Math.max(zoom * f, 0.04), 40),
+          s = nz / zoom;
+        panX = cx - s * (cx - panX);
+        panY = cy - s * (cy - panY);
+        zoom = nz;
+        applyTransform();
+      }
+      function zoomIn() {
+        const r = wrap.getBoundingClientRect();
+        zoomAt(r.width / 2, r.height / 2, 1.25);
+      }
+      function zoomOut() {
+        const r = wrap.getBoundingClientRect();
+        zoomAt(r.width / 2, r.height / 2, 0.8);
+      }
+      function zoomFit() {
+        if (!imageLoaded) return;
+        const r = wrap.getBoundingClientRect();
+        zoom = Math.min(
+          (r.width - 40) / displayCanvas.width,
+          (r.height - 40) / displayCanvas.height,
+        );
+        panX = (r.width - displayCanvas.width * zoom) / 2;
+        panY = (r.height - displayCanvas.height * zoom) / 2;
+        applyTransform();
+      }
+      wrap.addEventListener(
+        "wheel",
+        (e) => {
+          e.preventDefault();
+          const r = wrap.getBoundingClientRect();
+          zoomAt(
+            e.clientX - r.left,
+            e.clientY - r.top,
+            e.deltaY < 0 ? 1.1 : 0.9,
+          );
+        },
+        { passive: false },
+      );
+
+      // ══════════════════════════════════
+      // CANVAS COORDS
+      // ══════════════════════════════════
+      function toCanvas(e) {
+        const r = wrap.getBoundingClientRect();
+        return {
+          x: Math.round((e.clientX - r.left - panX) / zoom),
+          y: Math.round((e.clientY - r.top - panY) / zoom),
+        };
+      }
+
+      // ══════════════════════════════════
+      // DRAWING
+      // ══════════════════════════════════
+      function drawStroke(x, y, fx, fy) {
+        const lctx = getActiveCtx();
+        if (!lctx) return;
+        lctx.save();
+        lctx.globalAlpha = brushOpacity;
+        const c = tool === "eraser" ? "#ffffff" : color;
+        lctx.fillStyle = c;
+        lctx.strokeStyle = c;
+        lctx.lineWidth = brushSize;
+        lctx.lineCap = brushShape === "round" ? "round" : "square";
+        lctx.lineJoin = brushShape === "round" ? "round" : "miter";
+        lctx.beginPath();
+        lctx.moveTo(fx, fy);
+        lctx.lineTo(x, y);
+        lctx.stroke();
+        if (brushShape === "round") {
+          lctx.beginPath();
+          lctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+          lctx.fill();
+        } else
+          lctx.fillRect(
+            x - brushSize / 2,
+            y - brushSize / 2,
+            brushSize,
+            brushSize,
+          );
+        lctx.restore();
+        composite();
+      }
+
+      // ── FLOOD FILL ──
+      function hexRGB(hex) {
+        return [
+          parseInt(hex.slice(1, 3), 16),
+          parseInt(hex.slice(3, 5), 16),
+          parseInt(hex.slice(5, 7), 16),
+        ];
+      }
+      function floodFill(sx, sy) {
+        const lctx = getActiveCtx();
+        if (!lctx) return;
+        const w = displayCanvas.width,
+          h = displayCanvas.height;
+        const src = lctx.getImageData(0, 0, w, h);
+        const dst = lctx.getImageData(0, 0, w, h);
+        const sd = src.data,
+          dd = dst.data;
+        const i0 = (sy * w + sx) * 4;
+        const tr = sd[i0],
+          tg = sd[i0 + 1],
+          tb = sd[i0 + 2];
+        const [fr, fg, fb] = hexRGB(color);
+        if (Math.abs(tr - fr) + Math.abs(tg - fg) + Math.abs(tb - fb) < 6)
+          return;
+        const tol = fillTol * 3;
+        const visited = new Uint8Array(w * h);
+        const stack = [sx + sy * w];
+        while (stack.length) {
+          const pos = stack.pop();
+          if (visited[pos]) continue;
+          const x = pos % w,
+            y = (pos / w) | 0;
+          if (x < 0 || x >= w || y < 0 || y >= h) continue;
+          const pi = pos * 4;
+          if (
+            Math.abs(sd[pi] - tr) +
+              Math.abs(sd[pi + 1] - tg) +
+              Math.abs(sd[pi + 2] - tb) >
+            tol
+          )
+            continue;
+          visited[pos] = 1;
+          dd[pi] = fr;
+          dd[pi + 1] = fg;
+          dd[pi + 2] = fb;
+          dd[pi + 3] = 255;
+          if (x + 1 < w) stack.push(pos + 1);
+          if (x - 1 >= 0) stack.push(pos - 1);
+          if (y + 1 < h) stack.push(pos + w);
+          if (y - 1 >= 0) stack.push(pos - w);
+        }
+        lctx.putImageData(dst, 0, 0);
+        composite();
+      }
+
+      // ── CURSOR ──
+      function drawCursor(x, y) {
+        cursorCtx.clearRect(0, 0, cursorCanvas.width, cursorCanvas.height);
+        if (!["brush", "eraser"].includes(tool)) return;
+        const r = brushSize / 2;
+        cursorCtx.save();
+        cursorCtx.strokeStyle = "rgba(255,255,255,.75)";
+        cursorCtx.lineWidth = 1 / zoom;
+        if (brushShape === "round") {
+          cursorCtx.beginPath();
+          cursorCtx.arc(x, y, r, 0, Math.PI * 2);
+          cursorCtx.stroke();
+        } else cursorCtx.strokeRect(x - r, y - r, brushSize, brushSize);
+        cursorCtx.fillStyle = "rgba(255,255,255,.6)";
+        cursorCtx.beginPath();
+        cursorCtx.arc(x, y, 1.5 / zoom, 0, Math.PI * 2);
+        cursorCtx.fill();
+        cursorCtx.restore();
+      }
+
+      // ══════════════════════════════════
+      // MOUSE
+      // ══════════════════════════════════
+      wrap.addEventListener("mousedown", (e) => {
+        if (!imageLoaded) return;
+        e.preventDefault();
+        if (spaceDown || tool === "pan") {
+          panSX = e.clientX;
+          panSY = e.clientY;
+          panOX = panX;
+          panOY = panY;
+          wrap.style.cursor = "grabbing";
+          return;
+        }
+        const pos = toCanvas(e);
+        if (
+          pos.x < 0 ||
+          pos.y < 0 ||
+          pos.x >= displayCanvas.width ||
+          pos.y >= displayCanvas.height
+        )
+          return;
+        if (tool === "zoomtool") {
+          const r = wrap.getBoundingClientRect();
+          zoomAt(
+            e.clientX - r.left,
+            e.clientY - r.top,
+            e.shiftKey ? 0.8 : 1.25,
+          );
+          return;
+        }
+        if (layers[activeLayerIndex]?.locked) {
+          toast("Esta capa está bloqueada 🔒");
+          return;
+        }
+        if (tool === "fill") {
+          const before = captureLayer(activeLayerIndex);
+          floodFill(pos.x, pos.y);
+          pushHist(
+            "Relleno",
+            "🪣",
+            activeLayerIndex,
+            before,
+            captureLayer(activeLayerIndex),
+          );
+          return;
+        }
+        if (tool === "brush" || tool === "eraser") {
+          pendingBefore = captureLayer(activeLayerIndex);
+          painting = true;
+          lastX = pos.x;
+          lastY = pos.y;
+          drawStroke(pos.x, pos.y, pos.x, pos.y);
+        }
+      });
+
+      wrap.addEventListener("mousemove", (e) => {
+        if ((spaceDown || tool === "pan") && e.buttons === 1) {
+          panX = panOX + e.clientX - panSX;
+          panY = panOY + e.clientY - panSY;
+          applyTransform();
+          return;
+        }
+        if (!imageLoaded) return;
+        const pos = toCanvas(e);
+        document.getElementById("coords").textContent =
+          `x: ${pos.x}  y: ${pos.y}`;
+        drawCursor(pos.x, pos.y);
+        if (painting && e.buttons === 1) {
+          drawStroke(pos.x, pos.y, lastX, lastY);
+          lastX = pos.x;
+          lastY = pos.y;
+        }
+      });
+
+      wrap.addEventListener("mouseup", () => {
+        if (painting && pendingBefore) {
+          const lbl = tool === "brush" ? "Pincelada" : "Borrado";
+          const ico = tool === "brush" ? "✏️" : "🧹";
+          pushHist(
+            lbl,
+            ico,
+            activeLayerIndex,
+            pendingBefore,
+            captureLayer(activeLayerIndex),
+          );
+          pendingBefore = null;
+        }
+        painting = false;
+        if (tool === "pan") wrap.style.cursor = "grab";
+      });
+      wrap.addEventListener("mouseleave", () => {
+        painting = false;
+        cursorCtx.clearRect(0, 0, cursorCanvas.width, cursorCanvas.height);
+      });
+
+      // ── KEYBOARD ──
+      document.addEventListener("keydown", (e) => {
+        if (e.code === "Space" && e.target === document.body) {
+          e.preventDefault();
+          spaceDown = true;
+          panOX = panX;
+          panOY = panY;
+          panSX = 0;
+          panSY = 0;
+          wrap.style.cursor = "grab";
+        }
+        if (e.target.tagName === "INPUT") return;
+        const k = e.key;
+        if (k === "b" || k === "B") setTool("brush");
+        if (k === "e" || k === "E") setTool("eraser");
+        if (k === "f" || k === "F") setTool("fill");
+        if (k === "v" || k === "V") setTool("pan");
+        if (k === "z" && !e.ctrlKey) setTool("zoomtool");
+        if (k === "[") {
+          brushSize = Math.max(1, brushSize - 5);
+          syncBS();
+        }
+        if (k === "]") {
+          brushSize = Math.min(200, brushSize + 5);
+          syncBS();
+        }
+        if (e.ctrlKey && k === "z") {
+          e.preventDefault();
+          undo();
+        }
+        if (e.ctrlKey && k === "y") {
+          e.preventDefault();
+          redo();
+        }
+      });
+      document.addEventListener("keyup", (e) => {
+        if (e.code === "Space") {
+          spaceDown = false;
+          wrap.style.cursor = tool === "pan" ? "grab" : "crosshair";
+        }
+      });
+      function syncBS() {
+        const s = document.getElementById("vs"),
+          v = document.getElementById("vs");
+        if (s) {
+          const el = document.querySelector("#tab-props input[type=range]");
+          if (el) el.value = brushSize;
+        }
+        renderProps();
+      }
+
+      // ══════════════════════════════════
+      // IMAGE LOADING
+      // ══════════════════════════════════
+      function loadImage(file) {
+        if (!file || !file.type.startsWith("image/")) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onload = () => {
+            const w = img.width,
+              h = img.height;
+            displayCanvas.width = w;
+            displayCanvas.height = h;
+            cursorCanvas.width = w;
+            cursorCanvas.height = h;
+            initLayers(w, h);
+            getLayerCtx(0).drawImage(img, 0, 0);
+            composite();
+            imageLoaded = true;
+            document.getElementById("drop-overlay").classList.add("hidden");
+            document.getElementById("page-info").textContent = `${w} × ${h}px`;
+            hist.length = 0;
+            histIdx = -1;
+            renderHistory();
+            updateURBtns();
+            renderLayers();
+            setTimeout(zoomFit, 50);
+            toast("✓ Imagen cargada");
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+      document
+        .getElementById("fi")
+        .addEventListener("change", (e) => loadImage(e.target.files[0]));
+      wrap.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        wrap.classList.add("drag-over");
+      });
+      wrap.addEventListener("dragleave", () =>
+        wrap.classList.remove("drag-over"),
+      );
+      wrap.addEventListener("drop", (e) => {
+        e.preventDefault();
+        wrap.classList.remove("drag-over");
+        loadImage(e.dataTransfer.files[0]);
+      });
+
+      // ══════════════════════════════════
+      // EXPORT
+      // ══════════════════════════════════
+      function exportPNG() {
+        if (!imageLoaded) {
+          toast("Cargá una imagen primero");
+          return;
+        }
+        const tmp = mkCanvas(displayCanvas.width, displayCanvas.height);
+        const tctx = tmp.getContext("2d");
+        for (const l of layers) {
+          if (l.visible && l.canvas) {
+            tctx.globalAlpha = l.opacity;
+            tctx.drawImage(l.canvas, 0, 0);
+          }
+        }
+        tctx.globalAlpha = 1;
+        const a = document.createElement("a");
+        a.href = tmp.toDataURL("image/png");
+        a.download = "pagina_limpia.png";
+        a.click();
+        toast("✓ Exportado como PNG");
+      }
+
+      // ══════════════════════════════════
+      // TOAST
+      // ══════════════════════════════════
+      let toastT;
+      function toast(msg) {
+        const el = document.getElementById("toast");
+        el.textContent = msg;
+        el.classList.add("show");
+        clearTimeout(toastT);
+        toastT = setTimeout(() => el.classList.remove("show"), 2400);
+      }
+
+      // ══════════════════════════════════
+      // INIT
+      // ══════════════════════════════════
+      setTool("brush");
+      renderProps();
+      renderHistory();
+      renderLayers();
+      applyTransform();
+    </script>
+  </body>
+</html>
